@@ -66,7 +66,7 @@ def get_sampler(model_name=REPO_ID):
     return data_sampler
 
 
-def infer(*args, **kwargs):
+def ace_step_infer(*args, **kwargs):
     model_demo = get_model(REPO_ID)
 
     return model_demo(*args, **kwargs)
@@ -120,7 +120,7 @@ def ui():
 
     create_text2music_ui(
         gr=gr,
-        text2music_process_func=infer,
+        text2music_process_func=ace_step_infer,
         sample_data_func=sample_data,
     )
 
