@@ -1,7 +1,15 @@
 import gradio as gr
-from tts_webui.utils.manage_model_state import manage_model_state, unload_model
+from tts_webui.utils.manage_model_state import (
+    manage_model_state,
+    unload_model,
+    is_model_loaded,
+)
 from tts_webui.utils.list_dir_models import unload_model_button
-
+from tts_webui.decorators import *
+from tts_webui.extensions_loader.decorator_extensions import (
+    decorator_extension_inner,
+    decorator_extension_outer,
+)
 
 REPO_ID = "ACE-Step/ACE-Step-v1-3.5B"
 
@@ -49,13 +57,14 @@ def get_model(
     return model_demo
 
 
-def switch_half_precision(use_half_precision, use_torch_compile, use_cpu_offload):
+def store_global_settings(use_half_precision, use_torch_compile, use_cpu_offload):
     global USE_HALF_PRECISION, USE_TORCH_COMPILE, USE_CPU_OFFLOAD
     USE_HALF_PRECISION = use_half_precision
     USE_TORCH_COMPILE = use_torch_compile
     USE_CPU_OFFLOAD = use_cpu_offload
-    unload_model("ace_step")
-    return "Model will be reloaded when you run the next generation."
+    if is_model_loaded("ace_step"):
+        return "Please unload the model to apply changes."
+    return "Settings applied."
 
 
 @manage_model_state("ace_step")
@@ -75,6 +84,16 @@ def get_sampler(model_name=REPO_ID):
 #     return model_demo(*args, ref_audio_input=ref_audio_input, **kwargs)
 
 
+# @decorator_extension_outer
+# @decorator_apply_torch_seed
+# @decorator_save_metadata
+# @decorator_save_wav
+# @decorator_add_model_type("piper")
+# @decorator_add_base_filename
+# @decorator_add_date
+# @decorator_log_generation
+# @decorator_extension_inner
+@log_function_time
 def ace_step_infer(
     audio_duration: float = 60.0,
     prompt: str = None,
@@ -167,39 +186,39 @@ def ui():
 
     gr.Markdown(
         """
-        <h1 style="text-align: center;">ACE-Step: A Step Towards Music Generation Foundation Model</h1>
+        <h2 style="text-align: center;">ACE-Step: A Step Towards Music Generation Foundation Model</h2>
 
-        Note: The extension does not currently support automatic file saving.
-
-        Weights size: 8gb. VRAM ~22gb at full, 11gb at half precision
-
-        CPU Offload can be enabled to reduce VRAM usage, but it does slow down the generation process, especially for short generations.
+        Weights size: 8gb. VRAM ~22gb at full, 11gb at half precision. <em>(Note: The extension does not currently support automatic file saving.)</em>
     """
     )
 
-    with gr.Row():
-        with gr.Column():
+    with gr.Column(variant="panel"):
+        gr.Markdown("### Model Settings")
+        with gr.Row():
             use_half_precision = gr.Checkbox(
                 label="Use half precision",
                 value=USE_HALF_PRECISION,
             )
             use_torch_compile = gr.Checkbox(
                 label="Use torch compile",
-                value=False,
+                value=USE_TORCH_COMPILE,
             )
             use_cpu_offload = gr.Checkbox(
                 label="Use CPU offload",
-                value=False,
+                value=USE_CPU_OFFLOAD,
             )
-            reload_model_button = gr.Button("Apply Settings and Unload Model")
-            reload_model_button.click(
-                fn=switch_half_precision,
-                inputs=[use_half_precision, use_torch_compile, use_cpu_offload],
-                outputs=[reload_model_button],
-                api_name="ace_step_reload_model",
-            )
-            with gr.Row():
-                unload_model_button("ace_step")
+            # save global changes when any of these change:
+            unload_model_button("ace_step")
+
+        model_info = gr.Markdown("")
+
+    for i in [use_half_precision, use_torch_compile, use_cpu_offload]:
+        i.change(
+            fn=store_global_settings,
+            inputs=[use_half_precision, use_torch_compile, use_cpu_offload],
+            outputs=[model_info],
+            api_name="ace_step_reload_model",
+        )
 
     create_text2music_ui(
         gr=gr,
