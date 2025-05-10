@@ -29,7 +29,7 @@ setuptools.setup(
     scripts=[],
     install_requires=[
         "gradio",
-        "ace-step @ git+https://github.com/rsxdalv/ACE-Step@loose"
+        "ace-step @ git+https://github.com/rsxdalv/ACE-Step@loose-2"
     ],
     classifiers=[
         "Programming Language :: Python :: 3",

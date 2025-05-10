@@ -6,7 +6,7 @@ def extension__tts_generation_webui():
     return {
         "package_name": "extension_ace_step",
         "name": "ACE-Step",
-        "version": "0.2.1",
+        "version": "0.2.2",
         "requirements": "git+https://github.com/rsxdalv/extension_ace_step@main",
         "description": "ACE-Step: A Step Towards Music Generation Foundation Model",
         "extension_type": "interface",

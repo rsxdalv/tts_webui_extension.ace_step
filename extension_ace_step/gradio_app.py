@@ -2,7 +2,7 @@ import gradio as gr
 from tts_webui.utils.manage_model_state import (
     manage_model_state,
     unload_model,
-    # is_model_loaded,
+    is_model_loaded,
 )
 from tts_webui.utils.list_dir_models import unload_model_button
 from tts_webui.decorators import *
@@ -15,7 +15,6 @@ REPO_ID = "ACE-Step/ACE-Step-v1-3.5B"
 
 
 CHECKPOINT_DIR = "data/models/ace_step/"
-# CHECKPOINT_DIR = "data/models/ace_step/default/"
 USE_HALF_PRECISION = False
 USE_TORCH_COMPILE = False
 USE_CPU_OFFLOAD = False
@@ -40,11 +39,6 @@ def get_model(
     if cpu_offload is None:
         cpu_offload = USE_CPU_OFFLOAD
 
-    # if use_half_precision:
-    #     cpu_offload = True
-    # else:
-    #     cpu_offload = False
-
     dtype = "bfloat16" if use_half_precision else "float32"
 
     model_demo = ACEStepPipeline(
@@ -62,9 +56,9 @@ def store_global_settings(use_half_precision, use_torch_compile, use_cpu_offload
     USE_HALF_PRECISION = use_half_precision
     USE_TORCH_COMPILE = use_torch_compile
     USE_CPU_OFFLOAD = use_cpu_offload
-    # if is_model_loaded("ace_step"):
-    return "Please unload the model to apply changes."
-    # return "Settings applied."
+    if is_model_loaded("ace_step"):
+        return "Please unload the model to apply changes."
+    return "Settings applied."
 
 
 @manage_model_state("ace_step")
@@ -73,15 +67,6 @@ def get_sampler(model_name=REPO_ID):
 
     data_sampler = DataSampler()
     return data_sampler
-
-
-# def ace_step_infer(*args, ref_audio_input=None, **kwargs):
-#     model_demo = get_model(REPO_ID)
-
-#     # return model_demo(*args, **kwargs)
-#     # return model_demo(*args, ref_audio_input=ref_audio_input, **kwargs)
-#     # TypeError: ACEStepPipeline.__call__() got multiple values for argument 'ref_audio_input'
-#     return model_demo(*args, ref_audio_input=ref_audio_input, **kwargs)
 
 
 # @decorator_extension_outer
