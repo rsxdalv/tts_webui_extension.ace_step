@@ -2,7 +2,7 @@ import gradio as gr
 from tts_webui.utils.manage_model_state import (
     manage_model_state,
     unload_model,
-    is_model_loaded,
+    # is_model_loaded,
 )
 from tts_webui.utils.list_dir_models import unload_model_button
 from tts_webui.decorators import *
@@ -62,9 +62,9 @@ def store_global_settings(use_half_precision, use_torch_compile, use_cpu_offload
     USE_HALF_PRECISION = use_half_precision
     USE_TORCH_COMPILE = use_torch_compile
     USE_CPU_OFFLOAD = use_cpu_offload
-    if is_model_loaded("ace_step"):
-        return "Please unload the model to apply changes."
-    return "Settings applied."
+    # if is_model_loaded("ace_step"):
+    return "Please unload the model to apply changes."
+    # return "Settings applied."
 
 
 @manage_model_state("ace_step")
