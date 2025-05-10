@@ -78,7 +78,7 @@ def get_sampler(model_name=REPO_ID):
 # @decorator_add_date
 # @decorator_log_generation
 # @decorator_extension_inner
-@log_function_time
+# @log_function_time
 def ace_step_infer(
     audio_duration: float = 60.0,
     prompt: str = None,
