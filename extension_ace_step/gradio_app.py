@@ -18,6 +18,7 @@ CHECKPOINT_DIR = "data/models/ace_step/"
 USE_HALF_PRECISION = False
 USE_TORCH_COMPILE = False
 USE_CPU_OFFLOAD = False
+USE_OVERLAPPED_DECODE = False
 
 
 @manage_model_state("ace_step")
@@ -27,6 +28,7 @@ def get_model(
     torch_compile=None,
     checkpoint_dir=CHECKPOINT_DIR,
     cpu_offload=None,
+    overlapped_decode=None,
 ):
     from acestep.pipeline_ace_step import ACEStepPipeline
 
@@ -39,6 +41,9 @@ def get_model(
     if cpu_offload is None:
         cpu_offload = USE_CPU_OFFLOAD
 
+    if overlapped_decode is None:
+        overlapped_decode = USE_OVERLAPPED_DECODE
+
     dtype = "bfloat16" if use_half_precision else "float32"
 
     model_demo = ACEStepPipeline(
@@ -46,16 +51,18 @@ def get_model(
         dtype=dtype,
         torch_compile=torch_compile,
         cpu_offload=cpu_offload,
+        overlapped_decode=overlapped_decode,
     )
 
     return model_demo
 
 
-def store_global_settings(use_half_precision, use_torch_compile, use_cpu_offload):
-    global USE_HALF_PRECISION, USE_TORCH_COMPILE, USE_CPU_OFFLOAD
+def store_global_settings(use_half_precision, use_torch_compile, use_cpu_offload, use_overlapped_decode):
+    global USE_HALF_PRECISION, USE_TORCH_COMPILE, USE_CPU_OFFLOAD, USE_OVERLAPPED_DECODE
     USE_HALF_PRECISION = use_half_precision
     USE_TORCH_COMPILE = use_torch_compile
     USE_CPU_OFFLOAD = use_cpu_offload
+    USE_OVERLAPPED_DECODE = use_overlapped_decode
     if is_model_loaded("ace_step"):
         return "Please unload the model to apply changes."
     return "Settings applied."
@@ -80,6 +87,7 @@ def get_sampler(model_name=REPO_ID):
 # @decorator_extension_inner
 # @log_function_time
 def ace_step_infer(
+    format: str = "wav",
     audio_duration: float = 60.0,
     prompt: str = None,
     lyrics: str = None,
@@ -101,6 +109,7 @@ def ace_step_infer(
     audio2audio_enable: bool = False,
     ref_audio_strength: float = 0.5,
     ref_audio_input: str = None,
+    lora_name_or_path: str = "none",
     retake_seeds: list = None,
     retake_variance: float = 0.5,
     task: str = "text2music",
@@ -113,13 +122,13 @@ def ace_step_infer(
     edit_n_max: float = 1.0,
     edit_n_avg: int = 1,
     save_path: str = None,
-    format: str = "wav",
     batch_size: int = 1,
     debug: bool = False,
 ):
     model_demo = get_model(REPO_ID)
 
     return model_demo(
+        format=format,
         audio_duration=audio_duration,
         prompt=prompt,
         lyrics=lyrics,
@@ -141,6 +150,7 @@ def ace_step_infer(
         audio2audio_enable=audio2audio_enable,
         ref_audio_strength=ref_audio_strength,
         ref_audio_input=ref_audio_input,
+        lora_name_or_path=lora_name_or_path,
         retake_seeds=retake_seeds,
         retake_variance=retake_variance,
         task=task,
@@ -153,7 +163,6 @@ def ace_step_infer(
         edit_n_max=edit_n_max,
         edit_n_avg=edit_n_avg,
         save_path=save_path,
-        format=format,
         batch_size=batch_size,
         debug=debug,
     )
@@ -192,15 +201,19 @@ def ui():
                 label="Use CPU offload",
                 value=USE_CPU_OFFLOAD,
             )
+            use_overlapped_decode = gr.Checkbox(
+                label="Use overlapped decode",
+                value=USE_OVERLAPPED_DECODE,
+            )
             # save global changes when any of these change:
             unload_model_button("ace_step")
 
         model_info = gr.Markdown("")
 
-    for i in [use_half_precision, use_torch_compile, use_cpu_offload]:
+    for i in [use_half_precision, use_torch_compile, use_cpu_offload, use_overlapped_decode]:
         i.change(
             fn=store_global_settings,
-            inputs=[use_half_precision, use_torch_compile, use_cpu_offload],
+            inputs=[use_half_precision, use_torch_compile, use_cpu_offload, use_overlapped_decode],
             outputs=[model_info],
             api_name="ace_step_reload_model",
         )
