@@ -1,24 +1,21 @@
 import gradio as gr
-from tts_webui.utils.manage_model_state import (
-    manage_model_state,
-    unload_model,
-    is_model_loaded,
-)
+from tts_webui.utils.manage_model_state import manage_model_state, is_model_loaded
 from tts_webui.utils.list_dir_models import unload_model_button
 from tts_webui.decorators import *
 from tts_webui.extensions_loader.decorator_extensions import (
     decorator_extension_inner,
     decorator_extension_outer,
 )
+import functools
 
 REPO_ID = "ACE-Step/ACE-Step-v1-3.5B"
 
 
 CHECKPOINT_DIR = "data/models/ace_step/"
-USE_HALF_PRECISION = False
+USE_HALF_PRECISION = True
 USE_TORCH_COMPILE = False
-USE_CPU_OFFLOAD = False
-USE_OVERLAPPED_DECODE = False
+USE_CPU_OFFLOAD = True
+USE_OVERLAPPED_DECODE = True
 
 
 @manage_model_state("ace_step")
@@ -57,7 +54,9 @@ def get_model(
     return model_demo
 
 
-def store_global_settings(use_half_precision, use_torch_compile, use_cpu_offload, use_overlapped_decode):
+def store_global_settings(
+    use_half_precision, use_torch_compile, use_cpu_offload, use_overlapped_decode
+):
     global USE_HALF_PRECISION, USE_TORCH_COMPILE, USE_CPU_OFFLOAD, USE_OVERLAPPED_DECODE
     USE_HALF_PRECISION = use_half_precision
     USE_TORCH_COMPILE = use_torch_compile
@@ -76,96 +75,105 @@ def get_sampler(model_name=REPO_ID):
     return data_sampler
 
 
-# @decorator_extension_outer
-# @decorator_apply_torch_seed
-# @decorator_save_metadata
-# @decorator_save_wav
-# @decorator_add_model_type("piper")
-# @decorator_add_base_filename
-# @decorator_add_date
-# @decorator_log_generation
-# @decorator_extension_inner
-# @log_function_time
-def ace_step_infer(
-    format: str = "wav",
-    audio_duration: float = 60.0,
-    prompt: str = None,
-    lyrics: str = None,
-    infer_step: int = 60,
-    guidance_scale: float = 15.0,
-    scheduler_type: str = "euler",
-    cfg_type: str = "apg",
-    omega_scale: int = 10.0,
-    manual_seeds: list = None,
-    guidance_interval: float = 0.5,
-    guidance_interval_decay: float = 0.0,
-    min_guidance_scale: float = 3.0,
-    use_erg_tag: bool = True,
-    use_erg_lyric: bool = True,
-    use_erg_diffusion: bool = True,
-    oss_steps: str = None,
-    guidance_scale_text: float = 0.0,
-    guidance_scale_lyric: float = 0.0,
-    audio2audio_enable: bool = False,
-    ref_audio_strength: float = 0.5,
-    ref_audio_input: str = None,
-    lora_name_or_path: str = "none",
-    retake_seeds: list = None,
-    retake_variance: float = 0.5,
-    task: str = "text2music",
-    repaint_start: int = 0,
-    repaint_end: int = 0,
-    src_audio_path: str = None,
-    edit_target_prompt: str = None,
-    edit_target_lyrics: str = None,
-    edit_n_min: float = 0.0,
-    edit_n_max: float = 1.0,
-    edit_n_avg: int = 1,
-    save_path: str = None,
-    batch_size: int = 1,
-    debug: bool = False,
-):
-    model_demo = get_model(REPO_ID)
+def decorator_ace_step_adapter(fn):
+    def ace_step_infer(
+        format: str = "wav",
+        audio_duration: float = 60.0,
+        prompt: str = None,
+        negative_prompt: str = None,
+        lyrics: str = None,
+        infer_step: int = 60,
+        guidance_scale: float = 15.0,
+        scheduler_type: str = "euler",
+        cfg_type: str = "apg",
+        omega_scale: int = 10.0,
+        manual_seeds: list = None,
+        guidance_interval: float = 0.5,
+        guidance_interval_decay: float = 0.0,
+        min_guidance_scale: float = 3.0,
+        use_erg_tag: bool = True,
+        use_erg_lyric: bool = True,
+        use_erg_diffusion: bool = True,
+        oss_steps: str = None,
+        guidance_scale_text: float = 0.0,
+        guidance_scale_lyric: float = 0.0,
+        audio2audio_enable: bool = False,
+        ref_audio_strength: float = 0.5,
+        ref_audio_input: str = None,
+        lora_name_or_path: str = "none",
+        retake_seeds: list = None,
+        retake_variance: float = 0.5,
+        task: str = "text2music",
+        repaint_start: int = 0,
+        repaint_end: int = 0,
+        src_audio_path: str = None,
+        edit_target_prompt: str = None,
+        edit_target_lyrics: str = None,
+        edit_n_min: float = 0.0,
+        edit_n_max: float = 1.0,
+        edit_n_avg: int = 1,
+        save_path: str = None,
+        batch_size: int = 1,
+        debug: bool = False,
+        **kwargs,
+    ):
+        params = locals()
+        del params["kwargs"]
+        del params["fn"]
+        return fn(**params, text=prompt[:20])
 
-    return model_demo(
-        format=format,
-        audio_duration=audio_duration,
-        prompt=prompt,
-        lyrics=lyrics,
-        infer_step=infer_step,
-        guidance_scale=guidance_scale,
-        scheduler_type=scheduler_type,
-        cfg_type=cfg_type,
-        omega_scale=omega_scale,
-        manual_seeds=manual_seeds,
-        guidance_interval=guidance_interval,
-        guidance_interval_decay=guidance_interval_decay,
-        min_guidance_scale=min_guidance_scale,
-        use_erg_tag=use_erg_tag,
-        use_erg_lyric=use_erg_lyric,
-        use_erg_diffusion=use_erg_diffusion,
-        oss_steps=oss_steps,
-        guidance_scale_text=guidance_scale_text,
-        guidance_scale_lyric=guidance_scale_lyric,
-        audio2audio_enable=audio2audio_enable,
-        ref_audio_strength=ref_audio_strength,
-        ref_audio_input=ref_audio_input,
-        lora_name_or_path=lora_name_or_path,
-        retake_seeds=retake_seeds,
-        retake_variance=retake_variance,
-        task=task,
-        repaint_start=repaint_start,
-        repaint_end=repaint_end,
-        src_audio_path=src_audio_path,
-        edit_target_prompt=edit_target_prompt,
-        edit_target_lyrics=edit_target_lyrics,
-        edit_n_min=edit_n_min,
-        edit_n_max=edit_n_max,
-        edit_n_avg=edit_n_avg,
-        save_path=save_path,
-        batch_size=batch_size,
-        debug=debug,
-    )
+    return ace_step_infer
+
+
+# This decorator will convert the return value from a list to a dict
+def to_dict_decorator(fn):
+    @functools.wraps(fn)
+    def wrapper(*args, **kwargs):
+        result = fn(*args, **kwargs)
+        if isinstance(result, list) and len(result) > 0:
+            import soundfile as sf
+
+            audio, sample_rate = sf.read(result[0])
+
+            return {"audio_out": (sample_rate, audio), "_original_result": result}
+        return result
+
+    return wrapper
+
+
+# This decorator will convert the return value back from a dict to the original list
+def from_dict_decorator(fn):
+    @functools.wraps(fn)
+    def wrapper(*args, **kwargs):
+        result = fn(*args, **kwargs)
+        # Check if the result is a dict with the _original_result key
+        if isinstance(result, dict) and "_original_result" in result:
+            return result["_original_result"]
+        return result
+
+    return wrapper
+
+
+# @functools.wraps(ace_step_infer)
+@decorator_ace_step_adapter
+@from_dict_decorator  # This will run last, converting dict back to list
+@decorator_extension_outer
+@decorator_apply_torch_seed
+@decorator_save_metadata
+@decorator_save_wav
+@decorator_add_model_type("ace_step")
+@decorator_add_base_filename
+@decorator_add_date
+@decorator_log_generation
+@decorator_extension_inner
+@to_dict_decorator  # This will run first, converting list to dict
+@log_function_time
+def ace_step_infer_decorated(*args, _type, text, **kwargs):
+    from acestep.pipeline_ace_step import ACEStepPipeline
+
+    model_demo: ACEStepPipeline = get_model(REPO_ID)
+
+    return model_demo(*args, **kwargs)
 
 
 def sample_data(*args, **kwargs):
@@ -175,15 +183,12 @@ def sample_data(*args, **kwargs):
 
 
 def ui():
+    # from acestep.ui.components import create_text2music_ui
 
-    from acestep.ui.components import create_text2music_ui
+    from .components import create_text2music_ui
 
     gr.Markdown(
-        """
-        <h2 style="text-align: center;">ACE-Step: A Step Towards Music Generation Foundation Model</h2>
-
-        Weights size: 8gb. VRAM ~22gb at full, 11gb at half precision. <em>(Note: The extension does not currently support automatic file saving.)</em>
-    """
+        """<h2 style="text-align: center;">ACE-Step: A Step Towards Music Generation Foundation Model</h2>"""
     )
 
     with gr.Column(variant="panel"):
@@ -210,17 +215,27 @@ def ui():
 
         model_info = gr.Markdown("")
 
-    for i in [use_half_precision, use_torch_compile, use_cpu_offload, use_overlapped_decode]:
+    for i in [
+        use_half_precision,
+        use_torch_compile,
+        use_cpu_offload,
+        use_overlapped_decode,
+    ]:
         i.change(
             fn=store_global_settings,
-            inputs=[use_half_precision, use_torch_compile, use_cpu_offload, use_overlapped_decode],
+            inputs=[
+                use_half_precision,
+                use_torch_compile,
+                use_cpu_offload,
+                use_overlapped_decode,
+            ],
             outputs=[model_info],
             api_name="ace_step_reload_model",
         )
 
     create_text2music_ui(
         gr=gr,
-        text2music_process_func=ace_step_infer,
+        text2music_process_func=ace_step_infer_decorated,
         sample_data_func=sample_data,
     )
 
