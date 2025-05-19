@@ -67,7 +67,7 @@ def store_global_settings(
     return "Settings applied."
 
 
-@manage_model_state("ace_step")
+@manage_model_state("ace_step_sampler")
 def get_sampler(model_name=REPO_ID):
     from acestep.data_sampler import DataSampler
 
@@ -182,6 +182,12 @@ def sample_data(*args, **kwargs):
     return data_sampler.sample(*args, **kwargs)
 
 
+def load_data(*args, **kwargs):
+    data_sampler = get_sampler(REPO_ID)
+
+    return data_sampler.load_data(*args, **kwargs)
+
+
 def ui():
     # from acestep.ui.components import create_text2music_ui
 
@@ -237,6 +243,7 @@ def ui():
         gr=gr,
         text2music_process_func=ace_step_infer_decorated,
         sample_data_func=sample_data,
+        load_data_func=load_data,
     )
 
 
